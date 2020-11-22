@@ -30,3 +30,14 @@ actions:
       properties:
         message:
           type: string
+  time:
+    http:
+      path: /time
+      method: post
+      port: 8080
+    output:
+      contentType: application/json
+      type: object
+      properties:
+        message:
+          type: string
