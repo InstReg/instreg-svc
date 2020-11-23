@@ -1,7 +1,9 @@
 extern crate iron;
 extern crate router;
+extern crate time;
 
 use iron::prelude::*;
+use iron::{typemap, AfterMiddleware, BeforeMiddleware};
 use iron::mime::Mime;
 use iron::status;
 
@@ -11,8 +13,27 @@ use rustc_serialize::json;
 
 use std::io::Read;
 use chrono::prelude::*;
+use time::precise_time_ns;
 
 extern crate chrono;
+struct ResponseTime;
+
+impl typemap::Key for ResponseTime { type Value = u64; }
+
+impl BeforeMiddleware for ResponseTime {
+    fn before(&self, req: &mut Request) -> IronResult<()> {
+        req.extensions.insert::<ResponseTime>(precise_time_ns());
+        Ok(())
+    }
+}
+
+impl AfterMiddleware for ResponseTime {
+    fn after(&self, req: &mut Request, res: Response) -> IronResult<Response> {
+        let delta = precise_time_ns() - *req.extensions.get::<ResponseTime>().unwrap();
+        println!("Request took: {} ms", (delta as f64) / 1000000.0);
+        Ok(res)
+    }
+}
 
 #[derive(RustcDecodable)]
 struct User {
@@ -57,6 +78,9 @@ fn main() {
     router.post("/message", message, "message");
     router.post("/time", time, "time");
 
+    let mut chain = Chain::new(router);
+    chain.link_before(ResponseTime);
+    chain.link_after(ResponseTime);
     println!("Running on http://0.0.0.0:8080");
-    Iron::new(router).http("0.0.0.0:8080").unwrap();
+    Iron::new(chain).http("0.0.0.0:8080").unwrap();
 }

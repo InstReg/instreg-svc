@@ -9,11 +9,9 @@ RUN         mkdir -p /rust/app/src && echo 'fn main(){}' > app/src/main.rs
 WORKDIR     /rust/app
 
 # Build & cache dependencies
-COPY        Cargo.toml Cargo.lock ./
+# Copy all fiels including .cargo/config to use faster local mirror
+COPY        . .
 RUN         cargo build --release --target x86_64-unknown-linux-musl
-
-# Copy application code
-COPY        src ./src
 
 # Build production binary
 RUN         touch src/main.rs && cargo build --release --target x86_64-unknown-linux-musl
